@@ -1,0 +1,8 @@
+@font-face {
+	font-family: "mplus-2p-regular";
+	src:
+		url("fonts/mplus-2p-regular.woff") format("woff"),
+		url("fonts/mplus-2p-regular.ttf") format("truetype");
+	font-weight: normal;
+	font-style: normal;
+}
