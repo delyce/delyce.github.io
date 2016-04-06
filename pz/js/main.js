@@ -110,6 +110,44 @@ var app = new (function(){
 	};
 });
 
+enchant.Data = enchant.Class.create(enchant.Group, {
+	initialize: function(option){
+		enchant.Group.call(this);
+
+		this._hpbar_back = new enchant.Entity();
+		this._hpbar_back.x = 10;
+		this._hpbar_back.y = 10;
+		this._hpbar_back.width = 100;
+		this._hpbar_back.height = 5;
+		this._hpbar_back.backgroundColor = "#000000";
+		this.addChild(this._hpbar_back);
+
+		this._hpbar_fore = new enchant.Entity();
+		this._hpbar_fore.x = 10;
+		this._hpbar_fore.y = 10;
+		this._hpbar_fore.width = 100;
+		this._hpbar_fore.height = 5;
+		this._hpbar_fore.backgroundColor = "#77FF77";
+		this.addChild(this._hpbar_fore);
+
+		this._spbar_back = new enchant.Entity();
+		this._spbar_back.x = 10;
+		this._spbar_back.y = 15;
+		this._spbar_back.width = 50;
+		this._spbar_back.height = 5;
+		this._spbar_back.backgroundColor = "#000000";
+		this.addChild(this._spbar_back);
+
+		this._spbar_fore = new enchant.Entity();
+		this._spbar_fore.x = 10;
+		this._spbar_fore.y = 15;
+		this._spbar_fore.width = 50;
+		this._spbar_fore.height = 5;
+		this._spbar_fore.backgroundColor = "#7777FF";
+		this.addChild(this._spbar_fore);
+	}
+});
+
 enchant.Mob32x32 = enchant.Class.create(enchant.Group, {
 	initialize: function(x, y, option){
 		enchant.Group.call(this);
@@ -141,9 +179,6 @@ enchant.Mob32x32 = enchant.Class.create(enchant.Group, {
 		this._sprite.x = this.option.adjust.x;
 		this._sprite.y = this.option.adjust.y;
 		this.addChild(this._sprite);
-
-		this.tl = new enchant.Timeline(this);
-		this.tl.setTimeBased();
 
 		app.loadSprite(this.option.shadow, (function(_this){
 			return function(){
@@ -259,6 +294,9 @@ enchant.Stage = enchant.Class.create(enchant.Scene, {
 
 		this.addChild(this.basegroup);
 
+		this.data = new enchant.Data();
+		this.addChild(this.data);
+
 		app.loadSprite(this.option.chipname, (function(_this){
 			return function(){
 				_this._loaded += 50;
@@ -314,7 +352,7 @@ enchant.Stage = enchant.Class.create(enchant.Scene, {
 	hitTest: function(x, y){
 		var map = { x: Math.floor(x / 16), y: Math.floor(y / 16) };
 
-		if (this.hitTestBlock(map.x, map.y) || this.hitTestMobs(map.x, map.y) || this.hitTestPlayer(map.x, map.y)) {
+		if (this.hitTestBlock(map.x, map.y)) {
 			return true;
 		}
 		return false;
@@ -378,6 +416,13 @@ var PlainStage = enchant.Class.create(enchant.Stage, {
 		else if (mobs_id == 34) {
 			this.mobs.push(new Magician(x, y));
 		}
+	},
+	onattack: function(attack){
+app.trace(attack + "ダメージ");
+		this.data._hpbar_fore.width -= attack;
+		if (this.data._hpbar_fore.width < 0){
+			this.data._hpbar_fore.width = 0;
+		}
 	}
 });
 
@@ -386,6 +431,8 @@ var Minami = enchant.Class.create(enchant.Mob32x32, {
 		enchant.Mob32x32.call(this, x, y, { nodeName: "Minami", chipname: "chara01.png", shadow: "shadow01.png" });
 
 		this._cursor = null;
+
+		this._walk_speed = Math.floor(app.game.fps * 300 / 1000);
 	},
 	onenterframe: function(){
 		if (this.ready) {
@@ -459,7 +506,7 @@ var Minami = enchant.Class.create(enchant.Mob32x32, {
 
 			if (vx != 0 || vy != 0) {
 				this.ready = false;
-				this.tl.moveTo(this.x + vx, this.y + vy, 300);
+				this.tl.moveTo(this.x + vx, this.y + vy, this._walk_speed);
 				this.tl.exec((function(_this){
 					return function(){
 						_this.x = Math.round(_this.x);
@@ -489,6 +536,12 @@ var Slime = enchant.Class.create(enchant.Mob32x32, {
 		this._automove_index = 0;
 		this._automove = [];
 
+		this._walk_speed = Math.floor(app.game.fps * 500 / 1000);
+		this._attack_speed = Math.floor(app.game.fps * 300 / 1000);
+		this._attack_delay = Math.floor(app.game.fps * 2000 / 1000);
+
+		this._attack_range = [1, 1, 2, 2, 3, 4, 5];
+
 		for (var i = 0; i < 10; i++) {
 			var pattern = Math.floor(Math.random() * 4);
 
@@ -511,84 +564,178 @@ var Slime = enchant.Class.create(enchant.Mob32x32, {
 			var input = { up: false, down: false, left: false, right: false };
 			var vx = 0, vy = 0;
 
-			if (typeof this._automove[this._automove_index] != "undefined") {
-				input.up    = (this._automove[this._automove_index].vy < 0);
-				input.down  = (this._automove[this._automove_index].vy > 0);
-				input.left  = (this._automove[this._automove_index].vx < 0);
-				input.right = (this._automove[this._automove_index].vx > 0);
-			}
+			var x		= Math.floor(this.x / 16);
+			var y		= Math.floor(this.y / 16);
+			var left	= Math.floor((this.x - 16) / 16);
+			var up		= Math.floor((this.y - 16) / 16);
+			var right	= Math.floor((this.x + 16) / 16);
+			var down	= Math.floor((this.y + 16) / 16);
 
-			if (input.up) {
-				this.direction = 3;
-				vy = -16;
-				if (app.game.currentScene.hitTest(this.x, this.y + vy)) {
-					vy = 0;
-				}
-			}
-			if (input.down) {
-				this.direction = 0;
-				vy = +16;
-				if (app.game.currentScene.hitTest(this.x, this.y + vy)) {
-					vy = 0;
-				}
-			}
-			if (input.left) {
-				this.direction = 1;
-				vx = -16;
-				if (app.game.currentScene.hitTest(this.x + vx, this.y)) {
-					vx = 0;
-				}
-			}
-			if (input.right) {
-				this.direction = 2;
-				vx = +16;
-				if (app.game.currentScene.hitTest(this.x + vx, this.y)) {
-					vx = 0;
-				}
-			}
-
-			if (vx != 0 && vy != 0) {
-				if (app.game.currentScene.hitTest(this.x + vx, this.y + vy)) {
-					if (!app.game.currentScene.hitTest(this.x + vx, this.y)) {
-						vy = 0;
-					}
-					else if (!app.game.currentScene.hitTest(this.x, this.y + vy)) {
-						vx = 0;
-					}
-					else {
-						vx = 0;
-						vy = 0;
-					}
-				}
-			}
-
-			if (vx != 0 || vy != 0) {
+			if (app.game.currentScene.hitTestPlayer(x, y)) {
 				this.ready = false;
-				this.tl.moveTo(this.x + vx, this.y + vy, 500);
+				var attack = this._attack_range[Math.floor(Math.random() * this._attack_range.length)];
+				this.tl.moveBy(0, -8, this._attack_speed);
+				this.tl.moveBy(0, +8, this._attack_speed);
+				this.tl.exec(function(){
+					(app.game.currentScene["onattack"] || function(){}).call(app.game.currentScene, attack);
+				});
+				this.tl.delay(this._attack_delay);
 				this.tl.exec((function(_this){
 					return function(){
 						_this.x = Math.round(_this.x);
 						_this.y = Math.round(_this.y);
 						_this.ready = true;
-					}
+					};
 				})(this));
 			}
-
-			if (vx == 0 && vy == 0) {
+			else if (app.game.currentScene.hitTestPlayer(left, y)) {
 				this.ready = false;
-				this.tl.delay(500);
+				var attack = this._attack_range[Math.floor(Math.random() * this._attack_range.length)];
+				this.tl.moveBy(-8, 0, this._attack_speed);
+				this.tl.moveBy(+8, 0, this._attack_speed);
+				this.tl.exec(function(){
+					(app.game.currentScene["onattack"] || function(){}).call(app.game.currentScene, attack);
+				});
+				this.tl.delay(this._attack_delay);
 				this.tl.exec((function(_this){
 					return function(){
 						_this.x = Math.round(_this.x);
 						_this.y = Math.round(_this.y);
 						_this.ready = true;
-					}
+					};
 				})(this));
 			}
+			else if (app.game.currentScene.hitTestPlayer(x, up)) {
+				this.ready = false;
+				var attack = this._attack_range[Math.floor(Math.random() * this._attack_range.length)];
+				this.tl.moveBy(0, -8, this._attack_speed);
+				this.tl.moveBy(0, +8, this._attack_speed);
+				this.tl.exec(function(){
+					(app.game.currentScene["onattack"] || function(){}).call(app.game.currentScene, attack);
+				});
+				this.tl.delay(this._attack_delay);
+				this.tl.exec((function(_this){
+					return function(){
+						_this.x = Math.round(_this.x);
+						_this.y = Math.round(_this.y);
+						_this.ready = true;
+					};
+				})(this));
+			}
+			else if (app.game.currentScene.hitTestPlayer(right, y)) {
+				this.ready = false;
+				var attack = this._attack_range[Math.floor(Math.random() * this._attack_range.length)];
+				this.tl.moveBy(+8, 0, this._attack_speed);
+				this.tl.moveBy(-8, 0, this._attack_speed);
+				this.tl.exec(function(){
+					(app.game.currentScene["onattack"] || function(){}).call(app.game.currentScene, attack);
+				});
+				this.tl.delay(this._attack_delay);
+				this.tl.exec((function(_this){
+					return function(){
+						_this.x = Math.round(_this.x);
+						_this.y = Math.round(_this.y);
+						_this.ready = true;
+					};
+				})(this));
+			}
+			else if (app.game.currentScene.hitTestPlayer(x, down)) {
+				this.ready = false;
+				var attack = this._attack_range[Math.floor(Math.random() * this._attack_range.length)];
+				this.tl.moveBy(0, +8, this._attack_speed);
+				this.tl.moveBy(0, -8, this._attack_speed);
+				this.tl.exec(function(){
+					(app.game.currentScene["onattack"] || function(){}).call(app.game.currentScene, attack);
+				});
+				this.tl.delay(this._attack_delay);
+				this.tl.exec((function(_this){
+					return function(){
+						_this.x = Math.round(_this.x);
+						_this.y = Math.round(_this.y);
+						_this.ready = true;
+					};
+				})(this));
+			}
+			else {
+				if (typeof this._automove[this._automove_index] != "undefined") {
+					input.up    = (this._automove[this._automove_index].vy < 0);
+					input.down  = (this._automove[this._automove_index].vy > 0);
+					input.left  = (this._automove[this._automove_index].vx < 0);
+					input.right = (this._automove[this._automove_index].vx > 0);
+				}
 
-			this._automove_index++;
-			if (this._automove.length < this._automove_index) {
-				this._automove_index = 0;
+				if (input.up) {
+					this.direction = 3;
+					vy = -16;
+					if (app.game.currentScene.hitTest(this.x, this.y + vy)) {
+						vy = 0;
+					}
+				}
+				if (input.down) {
+					this.direction = 0;
+					vy = +16;
+					if (app.game.currentScene.hitTest(this.x, this.y + vy)) {
+						vy = 0;
+					}
+				}
+				if (input.left) {
+					this.direction = 1;
+					vx = -16;
+					if (app.game.currentScene.hitTest(this.x + vx, this.y)) {
+						vx = 0;
+					}
+				}
+				if (input.right) {
+					this.direction = 2;
+					vx = +16;
+					if (app.game.currentScene.hitTest(this.x + vx, this.y)) {
+						vx = 0;
+					}
+				}
+
+				if (vx != 0 && vy != 0) {
+					if (app.game.currentScene.hitTest(this.x + vx, this.y + vy)) {
+						if (!app.game.currentScene.hitTest(this.x + vx, this.y)) {
+							vy = 0;
+						}
+						else if (!app.game.currentScene.hitTest(this.x, this.y + vy)) {
+							vx = 0;
+						}
+						else {
+							vx = 0;
+							vy = 0;
+						}
+					}
+				}
+
+				if (vx != 0 || vy != 0) {
+					this.ready = false;
+					this.tl.moveTo(this.x + vx, this.y + vy, this._walk_speed);
+					this.tl.exec((function(_this){
+						return function(){
+							_this.x = Math.round(_this.x);
+							_this.y = Math.round(_this.y);
+							_this.ready = true;
+						};
+					})(this));
+				}
+
+				if (vx == 0 && vy == 0) {
+					this.ready = false;
+					this.tl.delay(this._walk_speed);
+					this.tl.exec((function(_this){
+						return function(){
+							_this.x = Math.round(_this.x);
+							_this.y = Math.round(_this.y);
+							_this.ready = true;
+						};
+					})(this));
+				}
+
+				this._automove_index++;
+				if (this._automove.length < this._automove_index) {
+					this._automove_index = 0;
+				}
 			}
 		}
 
