@@ -427,13 +427,7 @@ var PlainStage = enchant.Class.create(enchant.Stage, {
 		damage.y = this.player.y - 32;
 		damage.width = 16 * text.length;
 		damage.height = 16;
-/*
-		damage.image.draw(
-			app.getSprite("number.png"),
-			0, 0, 16, 16,
-			attack * 16, 0, 16, 16);
-*/
-damage.image.draw(app.getSprite("number.png"));
+		damage.image.draw(app.getSprite("number.png"), attack * 16, 0, 16, 16, 0, 0, 16, 16);
 		this.basegroup.addChild(damage);
 		setTimeout(function(){
 			damage.parentNode.removeChild(damage);
@@ -450,6 +444,7 @@ var Minami = enchant.Class.create(enchant.Mob32x32, {
 		enchant.Mob32x32.call(this, x, y, { nodeName: "Minami", chipname: "chara01.png", shadow: "shadow01.png" });
 
 		this._cursor = null;
+		this._spbar_timer = null;
 
 		this._walk_speed = Math.floor(app.game.fps * 300 / 1000);
 	},
@@ -521,6 +516,15 @@ var Minami = enchant.Class.create(enchant.Mob32x32, {
 
 			if (vx == 0 && vy == 0) {
 				this._cursor = null;
+				if (this._spbar_timer == null) {
+					this._spbar_timer = setTimeout(function(){
+						app.game.currentScene.data._spbar_fore.width += 10;
+						if (app.game.currentScene.data._spbar_fore.width > 50) {
+							app.game.currentScene.data._spbar_fore.width = 50;
+						}
+						app.game.currentScene.player._spbar_timer = null;
+					}, 5000);
+				}
 			}
 
 			if (vx != 0 || vy != 0) {
@@ -533,6 +537,14 @@ var Minami = enchant.Class.create(enchant.Mob32x32, {
 						_this.ready = true;
 					}
 				})(this));
+				app.game.currentScene.data._spbar_fore.width -= 1;
+				if (app.game.currentScene.data._spbar_fore.width < 0) {
+					app.game.currentScene.data._spbar_fore.width = 0;
+				}
+				if (this._spbar_timer != null) {
+					clearTimeout(this._spbar_timer);
+					this._spbar_timer = null;
+				}
 			}
 		}
 
