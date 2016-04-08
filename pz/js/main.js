@@ -405,6 +405,8 @@ enchant.Stage = enchant.Class.create(enchant.Scene, {
 var PlainStage = enchant.Class.create(enchant.Stage, {
 	initialize: function(){
 		enchant.Stage.call(this, { nodeName: "PlainStage", chipname: "map01.png", mapdata: "plain.xml" });
+
+		app.loadSprite("number.png", function(){});
 	},
 	dispatchMobs: function(x, y, mobs_id){
 		if (mobs_id == 32) {
@@ -418,7 +420,24 @@ var PlainStage = enchant.Class.create(enchant.Stage, {
 		}
 	},
 	onattack: function(attack){
-app.trace(attack + "ダメージ");
+		var text = String(attack);
+		var damage = new enchant.Sprite(16 * text.length, 16);
+		damage.image = new enchant.Surface(16 * text.length, 16);
+		damage.x = this.player.x;
+		damage.y = this.player.y - 32;
+		damage.width = 16 * text.length;
+		damage.height = 16;
+/*
+		damage.image.draw(
+			app.getSprite("number.png"),
+			0, 0, 16, 16,
+			attack * 16, 0, 16, 16);
+*/
+damage.image.draw(app.getSprite("number.png"));
+		this.basegroup.addChild(damage);
+		setTimeout(function(){
+			damage.parentNode.removeChild(damage);
+		}, 1000);
 		this.data._hpbar_fore.width -= attack;
 		if (this.data._hpbar_fore.width < 0){
 			this.data._hpbar_fore.width = 0;
