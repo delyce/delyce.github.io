@@ -384,12 +384,14 @@ enchant.Stage = enchant.Class.create(enchant.Scene, {
 		return false;
 	},
 	_onenterframe: function(){
-		var x = Math.min((app.game.width  - 32) / 2 - this.player.x, 0);
-		var y = Math.min((app.game.height - 32) / 2 - this.player.y, 0);
-		x = Math.max(app.game.width,  x + this.background.width)  - this.background.width;
-		y = Math.max(app.game.height, y + this.background.height) - this.background.height;
-		this.basegroup.x = Math.round(x);
-		this.basegroup.y = Math.round(y);
+		if (this.age % 2 == 0) {
+			var x = Math.min((app.game.width  - 32) / 2 - this.player.x, 0);
+			var y = Math.min((app.game.height - 32) / 2 - this.player.y, 0);
+			x = Math.max(app.game.width,  x + this.background.width)  - this.background.width;
+			y = Math.max(app.game.height, y + this.background.height) - this.background.height;
+			this.basegroup.x = Math.round(x);
+			this.basegroup.y = Math.round(y);
+		}
 	},
 	ontap: function(e){
 		var x = Math.floor((e.center.x - ((window.innerWidth - 320)  / 2) - this.basegroup.x) / 16);
@@ -423,11 +425,18 @@ var PlainStage = enchant.Class.create(enchant.Stage, {
 		var text = String(attack);
 		var damage = new enchant.Sprite(16 * text.length, 16);
 		damage.image = new enchant.Surface(16 * text.length, 16);
-		damage.x = this.player.x;
+		damage.x = this.player.x - (8 * (text.length - 1));
 		damage.y = this.player.y - 32;
 		damage.width = 16 * text.length;
 		damage.height = 16;
-		damage.image.draw(app.getSprite("number.png"), attack * 16, 0, 16, 16, 0, 0, 16, 16);
+
+		for (var i = 0; i < text.length; i++) {
+			var num = parseInt(text.substring(i, i + 1))
+			damage.image.draw(app.getSprite("number.png"), num * 16, 0, 16, 16, i * 16, 0, 16, 16);
+		}
+
+		damage.tl.fadeOut(60);
+
 		this.basegroup.addChild(damage);
 		setTimeout(function(){
 			damage.parentNode.removeChild(damage);
@@ -445,6 +454,7 @@ var Minami = enchant.Class.create(enchant.Mob32x32, {
 
 		this._cursor = null;
 		this._spbar_timer = null;
+		this._hpbar_timer = null;
 
 		this._walk_speed = Math.floor(app.game.fps * 300 / 1000);
 	},
@@ -525,6 +535,15 @@ var Minami = enchant.Class.create(enchant.Mob32x32, {
 						app.game.currentScene.player._spbar_timer = null;
 					}, 5000);
 				}
+				if (this._hpbar_timer == null) {
+					this._hpbar_timer = setTimeout(function(){
+						app.game.currentScene.data._hpbar_fore.width += 20;
+						if (app.game.currentScene.data._hpbar_fore.width > 100) {
+							app.game.currentScene.data._hpbar_fore.width = 100;
+						}
+						app.game.currentScene.player._hpbar_timer = null;
+					}, 5000);
+				}
 			}
 
 			if (vx != 0 || vy != 0) {
@@ -571,7 +590,7 @@ var Slime = enchant.Class.create(enchant.Mob32x32, {
 		this._attack_speed = Math.floor(app.game.fps * 300 / 1000);
 		this._attack_delay = Math.floor(app.game.fps * 2000 / 1000);
 
-		this._attack_range = [1, 1, 2, 2, 3, 4, 5];
+		this._attack_range = [6, 7, 8, 9, 9, 10, 10, 10, 11, 11, 12, 13, 14];
 
 		for (var i = 0; i < 10; i++) {
 			var pattern = Math.floor(Math.random() * 4);
@@ -782,6 +801,9 @@ var Magician = enchant.Class.create(enchant.Mob32x32, {
 	initialize: function(x, y){
 		enchant.Mob32x32.call(this, x, y, { nodeName: "Magician", chipname: "enemy02.png", shadow: "shadow01.png" });
 		this.nodeName = "Magician";
+
+		this._talk_mode = false;
+		this._talk_mode_count = 0;
 	},
 	onenterframe: function(){
 		var i = this.direction * 3;
@@ -790,6 +812,67 @@ var Magician = enchant.Class.create(enchant.Mob32x32, {
 			i + 1, i + 1, i + 1, i + 1, i + 1, i + 1, i + 1, i + 1, i + 1, i + 1, i + 1, i + 1,
 			i + 2, i + 2, i + 2, i + 2, i + 2, i + 2, i + 2, i + 2, i + 2, i + 2, i + 2, i + 2,
 			i + 1, i + 1, i + 1, i + 1, i + 1, i + 1, i + 1, i + 1, i + 1, i + 1, i + 1, i + 1];
+
+		if (!this._talk_mode) {
+			var x		= Math.floor(this.x / 16);
+			var y		= Math.floor(this.y / 16);
+			var left	= Math.floor((this.x - 16) / 16);
+			var up		= Math.floor((this.y - 16) / 16);
+			var right	= Math.floor((this.x + 16) / 16);
+			var down	= Math.floor((this.y + 16) / 16);
+
+			if (app.game.currentScene.hitTestPlayer(x, y)
+				|| (app.game.currentScene.hitTestPlayer(left, y))
+				|| (app.game.currentScene.hitTestPlayer(x, up))
+				|| (app.game.currentScene.hitTestPlayer(right, y))
+				|| (app.game.currentScene.hitTestPlayer(x, down))
+				|| (app.game.currentScene.hitTestPlayer(left, up))
+				|| (app.game.currentScene.hitTestPlayer(right, up))
+				|| (app.game.currentScene.hitTestPlayer(left, down))
+				|| (app.game.currentScene.hitTestPlayer(right, down)))
+			{
+				this._talk_mode_count++;
+				if (this._talk_mode_count > 60) {
+					this._talk_mode = true;
+//					app.game.pushScene(new TalkScene());
+					app.game.currentScene.addChild(new Talk());
+				}
+			}
+			else {
+				this._talk_mode_count = 0;
+			}
+		}
+	}
+});
+
+var Talk = enchant.Class.create(enchant.Entity, {
+	initialize: function(){
+		enchant.Entity.call(this);
+
+		//var message = new enchant.Entity();
+		this.x = 10;
+		this.y = 210;
+		this.width = 300;
+		this.height = 100;
+		this.color = "#000000";
+		this.backgroundColor = "#FFFFFF";
+/*
+		this._element = document.createElement("div");
+		this._element.style.font = "16px/20px 'mplus-2p-regular', sans-serif";
+		this._element.style.
+*/
+		this._element = document.createElement("div");
+		$(this._element).text("こんにちは！").css({
+			font: "16px/20px mplus-2p-regular, sans-serif"
+		});
+
+//		this.addChild(message);
+
+		setTimeout((function(_this){
+			return function(){
+				_this.parentNode.removeChild(_this);
+			};
+		})(this), 2000);
 	}
 });
 
