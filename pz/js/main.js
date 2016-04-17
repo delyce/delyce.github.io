@@ -432,7 +432,7 @@ var PlainStage = enchant.Class.create(enchant.Stage, {
 
 		for (var i = 0; i < text.length; i++) {
 			var num = parseInt(text.substring(i, i + 1))
-			damage.image.draw(app.getSprite("number.png"), num * 16, 0, 16, 16, i * 16, 0, 16, 16);
+			damage.image.draw(app.getSprite("number.png"), num * 16, 16, 16, 16, i * 16, 0, 16, 16);
 		}
 
 		damage.tl.fadeOut(60);
@@ -450,7 +450,8 @@ var PlainStage = enchant.Class.create(enchant.Stage, {
 
 var Minami = enchant.Class.create(enchant.Mob32x32, {
 	initialize: function(x, y){
-		enchant.Mob32x32.call(this, x, y, { nodeName: "Minami", chipname: "chara01.png", shadow: "shadow01.png" });
+//		enchant.Mob32x32.call(this, x, y, { nodeName: "Minami", chipname: "chara01.png", shadow: "shadow01.png" });
+		enchant.Mob32x32.call(this, x, y, { nodeName: "Minami", chipname: "minami01.png", shadow: "shadow01.png" });
 
 		this._cursor = null;
 		this._spbar_timer = null;
