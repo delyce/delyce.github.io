@@ -800,7 +800,8 @@ var Slime = enchant.Class.create(enchant.Mob32x32, {
 
 var Magician = enchant.Class.create(enchant.Mob32x32, {
 	initialize: function(x, y){
-		enchant.Mob32x32.call(this, x, y, { nodeName: "Magician", chipname: "enemy02.png", shadow: "shadow01.png" });
+//		enchant.Mob32x32.call(this, x, y, { nodeName: "Magician", chipname: "enemy02.png", shadow: "shadow01.png" });
+		enchant.Mob32x32.call(this, x, y, { nodeName: "Magician", chipname: "zombie01.png", shadow: "shadow01.png" });
 		this.nodeName = "Magician";
 
 		this._talk_mode = false;
